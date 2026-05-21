@@ -307,7 +307,7 @@ body { font-family: -apple-system, Arial, sans-serif; background: var(--bg); col
   <div class="voz-resultado" id="voz-resultado"></div>
   <div class="voz-btns">
     <button class="btn-voz-ok" id="btn-voz-ok" style="display:none" onclick="confirmarVoz()">✅ Confirmar</button>
-    <button class="btn-voz-ok" id="btn-voz-nuevo" style="display:none;background:#1a6b8a;" onclick="abrirNuevoProd({cant:vozData?.cant||1,precio:vozData?.precio||0,venta:vozData?.venta||0})">🆕 Cargar artículo nuevo</button>
+    <button class="btn-voz-ok" id="btn-voz-nuevo" style="display:none;background:#1a6b8a;" onclick="abrirNuevoProd({cant:vozData?.cant||1,precio:vozData?.precio||0,venta:vozData?.venta||0,nombreHint:vozData?.nombreHint||''})">🆕 Cargar artículo nuevo</button>
     <button class="btn-voz-cancel" onclick="cerrarVoz()">Cancelar</button>
   </div>
   <div class="voz-tip" id="voz-tip">Decí algo como:<br>"Compré 5 muñecas baby a 25000 ganancia 15000"<br>o "Vendí 3 peluches"</div>
@@ -400,8 +400,8 @@ function iniciarVoz(modo) {
   document.getElementById('voz-resultado').style.display = 'none';
   document.getElementById('btn-voz-ok').style.display = 'none';
   document.getElementById('voz-tip').textContent = modo === 'compra'
-    ? 'Ejemplo: "Compré 5 muñecas baby a 25000 ganancia 15000"'
-    : 'Ejemplo: "Vendí 3 peluches" o "Vendí 2 set lego"';
+    ? 'Decí: "Compré 10 PlayStation a 1500000 ganancia 500000"'
+    : 'Decí: "Vendí 3 peluches" o "Vendí 2 Figura Superhéroe"';
 
   const rec = new SR();
   rec.lang = 'es-ES';
@@ -443,7 +443,16 @@ function procesarVoz(txt) {
     if (prod) break;
   }
 
-  vozData = { cant, precio, ganancia, venta, prod };
+  // Extraer nombre hint: quitar palabras clave y números del texto
+  const nombreHint = t
+    .replace(/compré?|compre|vendí?|vendi|unidades?|juguetes?/gi, '')
+    .replace(/(?:a|precio|costo)\s*\d+/gi, '')
+    .replace(/ganancia\s*\d+/gi, '')
+    .replace(/\b\d+\b/g, '')
+    .replace(/\s+/g, ' ').trim()
+    .replace(/^\w/, c => c.toUpperCase());
+
+  vozData = { cant, precio, ganancia, venta, prod, nombreHint };
   const res = document.getElementById('voz-resultado');
   res.innerHTML = `
     <div class="voz-res-row"><span class="voz-res-lbl">Producto</span><span class="voz-res-val">${prod ? prod.emoji+' '+prod.nombre : '❓ No detectado'}</span></div>
