@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>GestJugue — Demo Juguetería</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --green: #25D366; --amber: #f0a500; --red: #f85149;
+  --text: #e6edf3; --muted: #8b949e;
+}
+body { font-family: -apple-system, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; max-width: 430px; margin: 0 auto; }
+
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 1rem; font-weight: 700; color: var(--green); }
+.header-sub { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+.header-badge { font-size: 0.65rem; color: var(--muted); text-align: right; line-height: 1.4; }
+
+.ekuatia-bar { background: rgba(37,211,102,0.07); border-bottom: 1px solid rgba(37,211,102,0.2); padding: 7px 16px; font-size: 0.74rem; color: var(--green); display: flex; align-items: center; gap: 6px; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px 4px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; }
+.stat .val { font-size: 1rem; font-weight: 700; color: var(--green); }
+.stat .lbl { font-size: 0.63rem; color: var(--muted); margin-top: 2px; }
+.stat.amber .val { color: var(--amber); }
+
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 55px; z-index: 99; }
+.tab { flex: 1; padding: 10px 2px; text-align: center; font-size: 0.68rem; font-weight: 600; color: var(--muted); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+.panel { display: none; padding: 12px 14px 90px; }
+.panel.active { display: block; }
+
+/* Vender */
+.hint { font-size: 0.74rem; color: var(--muted); margin-bottom: 10px; }
+.prod-grid { display: flex; flex-direction: column; gap: 8px; }
+.prod-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.15s, transform 0.1s; active-transform: scale(0.98); }
+.prod-card:active { transform: scale(0.98); border-color: var(--green); }
+.prod-card.low-stock { border-color: rgba(240,165,0,0.35); }
+.prod-card.agotado { opacity: 0.45; }
+.prod-icon { width: 38px; height: 38px; background: rgba(37,211,102,0.08); border-radius: 8px; display: grid; place-items: center; font-size: 19px; flex-shrink: 0; }
+.prod-info { flex: 1; min-width: 0; }
+.prod-name { font-weight: 600; font-size: 0.86rem; }
+.prod-price { color: var(--green); font-size: 0.8rem; font-weight: 700; margin-top: 1px; }
+.prod-stock { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+.prod-stock.low { color: var(--amber); }
+.prod-stock.out { color: var(--red); }
+.btn-sell { background: var(--green); color: #000; border: none; padding: 8px 13px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.btn-sell:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+/* Compras */
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 14px; }
+.form-card h3 { font-size: 0.86rem; font-weight: 700; color: var(--amber); margin-bottom: 12px; }
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.field select, .field input { width: 100%; background: #0d1117; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; color: var(--text); font-size: 0.86rem; outline: none; }
+.field select:focus, .field input:focus { border-color: var(--amber); }
+.btn-registrar { width: 100%; background: var(--amber); color: #000; border: none; padding: 11px; border-radius: 8px; font-weight: 700; font-size: 0.86rem; cursor: pointer; margin-top: 4px; }
+.list-items { display: flex; flex-direction: column; gap: 8px; }
+.list-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; display: flex; justify-content: space-between; align-items: center; }
+.li-name { font-size: 0.84rem; font-weight: 600; }
+.li-sub { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+.li-val { font-weight: 700; font-size: 0.84rem; color: var(--amber); text-align: right; }
+.li-val-green { color: var(--green); }
+
+/* Stock */
+.stock-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 13px; margin-bottom: 8px; }
+.stock-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.stock-name { font-size: 0.87rem; font-weight: 600; }
+.stock-qty { font-size: 1rem; font-weight: 700; }
+.stock-qty.ok { color: var(--green); }
+.stock-qty.low { color: var(--amber); }
+.stock-qty.out { color: var(--red); }
+.stock-prices { display: flex; gap: 12px; flex-wrap: wrap; }
+.sp { font-size: 0.7rem; color: var(--muted); }
+.sp span { font-weight: 700; color: var(--text); }
+.sp.gain span { color: var(--green); }
+
+/* Reporte */
+.rep-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; }
+.rep-card h3 { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
+.rep-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.84rem; }
+.rep-row:last-child { border: none; }
+.rep-val { font-weight: 700; }
+.rep-green { color: var(--green); }
+.rep-amber { color: var(--amber); }
+.venta-row { display: flex; justify-content: space-between; font-size: 0.81rem; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.venta-row:last-child { border: none; }
+.vt { color: var(--muted); font-size: 0.68rem; }
+.ekuatia-note { background: rgba(37,211,102,0.05); border: 1px solid rgba(37,211,102,0.2); border-radius: 12px; padding: 14px 15px; margin-top: 4px; }
+.ekuatia-note h3 { font-size: 0.72rem; color: var(--green); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+.ekuatia-note p { font-size: 0.81rem; color: var(--muted); line-height: 1.7; }
+.ekuatia-note strong { color: var(--text); }
+
+.empty { text-align: center; color: var(--muted); font-size: 0.81rem; padding: 20px; }
+
+.foto-box { border: 1.5px dashed var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color 0.2s; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+.foto-box:hover { border-color: var(--amber); }
+.foto-placeholder { color: var(--muted); font-size: 0.8rem; padding: 16px; text-align: center; }
+.foto-preview { width: 100%; max-height: 180px; object-fit: cover; display: block; border-radius: 8px; }
+.foto-tag { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--green); background: rgba(37,211,102,0.08); border-radius: 6px; padding: 3px 8px; margin-top: 4px; width: fit-content; }
+
+.btn-scan { width: 100%; background: #1c2330; border: 1.5px dashed var(--green); color: var(--green); padding: 11px; border-radius: 10px; font-size: 0.86rem; font-weight: 700; cursor: pointer; margin-bottom: 12px; transition: background 0.2s; }
+.btn-scan:hover { background: rgba(37,211,102,0.1); }
+.prod-detectado { background: rgba(37,211,102,0.07); border: 1px solid rgba(37,211,102,0.3); border-radius: 10px; padding: 10px 13px; margin-bottom: 12px; font-size: 0.82rem; color: var(--green); }
+.venta-calc { flex: 1; background: rgba(37,211,102,0.08); border: 1px solid rgba(37,211,102,0.2); border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; font-weight: 700; color: var(--green); }
+.scanner-modal { position: fixed; inset: 0; background: #000; z-index: 500; display: flex; flex-direction: column; }
+.scanner-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: rgba(0,0,0,0.85); color: #fff; font-size: 0.84rem; }
+.scanner-header button { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; border-radius: 6px; }
+#scanner-view { flex: 1; overflow: hidden; }
+#scanner-view video { width: 100% !important; height: 100% !important; object-fit: cover; }
+.scanner-hint { padding: 14px 16px; background: rgba(0,0,0,0.85); color: var(--green); font-size: 0.78rem; text-align: center; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 600; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 360px; overflow: hidden; }
+.comp-header { background: var(--green); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+.comp-logo { font-size: 0.95rem; font-weight: 700; color: #000; }
+.comp-fecha { font-size: 0.72rem; color: rgba(0,0,0,0.7); }
+.comp-title { text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; padding: 14px 16px 6px; }
+.comp-rows { padding: 0 16px 10px; }
+.comp-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.comp-row:last-child { border: none; }
+.comp-row .cr-lbl { color: var(--muted); }
+.comp-row .cr-val { font-weight: 700; }
+.comp-row .cr-green { color: var(--green); }
+.comp-ekuatia { text-align: center; font-size: 0.68rem; color: var(--muted); padding: 0 16px 12px; }
+.comp-btns { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 16px; }
+.btn-comp-wa { background: var(--green); color: #000; border: none; padding: 11px; border-radius: 9px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+.btn-comp-close { background: var(--surface); color: var(--muted); border: 1px solid var(--border); padding: 9px; border-radius: 9px; font-size: 0.85rem; cursor: pointer; }
+
+.alerta-stock { background: rgba(240,165,0,0.1); border-bottom: 1px solid rgba(240,165,0,0.3); padding: 8px 16px; font-size: 0.75rem; color: var(--amber); position: sticky; top: 100px; z-index: 90; }
+
+.ekuatia-import-card { background: rgba(88,166,255,0.06); border: 1px solid rgba(88,166,255,0.25); border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.ekim-icon { font-size: 28px; flex-shrink: 0; }
+.ekim-info { flex: 1; min-width: 0; }
+.ekim-title { font-size: 0.88rem; font-weight: 700; color: #58a6ff; }
+.ekim-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.btn-ekim { background: #1f6feb; color: #fff; border: none; padding: 9px 16px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.separador { text-align: center; font-size: 0.72rem; color: var(--muted); padding: 10px 0 6px; }
+.ekim-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 0.84rem; }
+.ekim-item:last-child { border: none; }
+.ekim-prod { font-weight: 600; }
+.ekim-det { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.ekim-precio { text-align: right; color: #58a6ff; font-weight: 700; }
+
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--green); border-radius: 12px; padding: 9px 18px; font-size: 0.83rem; z-index: 999; opacity: 0; transition: all 0.3s; white-space: nowrap; max-width: 90vw; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🧸 GestJugue</h1>
+    <div class="header-sub" id="fecha-hdr">—</div>
+  </div>
+  <div class="header-badge">Demo<br>IsabSoft</div>
+</div>
+
+<div class="ekuatia-bar">
+  ✅ Compatible con eKuatia — seguís facturando igual. GestJugue lleva el stock.
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="val" id="st-ventas">0</div><div class="lbl">Ventas hoy</div></div>
+  <div class="stat amber"><div class="val" id="st-ingresos">₲ 0</div><div class="lbl">Ingresos</div></div>
+  <div class="stat"><div class="val rep-green" id="st-ganancia">₲ 0</div><div class="lbl">Ganancia</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="setTab('vender')">🛒 Vender</button>
+  <button class="tab" onclick="setTab('compras')">📦 Compras</button>
+  <button class="tab" onclick="setTab('stock')">📊 Stock</button>
+  <button class="tab" onclick="setTab('reporte')">📈 Reporte</button>
+</div>
+
+<div class="panel active" id="panel-vender">
+  <div class="hint">Tocá un producto para registrar la venta ↓</div>
+  <div class="prod-grid" id="prod-grid"></div>
+</div>
+
+<div class="panel" id="panel-compras">
+
+  <!-- Importar eKuatia -->
+  <div class="ekuatia-import-card">
+    <div class="ekim-icon">📄</div>
+    <div class="ekim-info">
+      <div class="ekim-title">Importar factura eKuatia</div>
+      <div class="ekim-sub">Descargá el XML de tu cuenta eKuatia → el stock se carga solo</div>
+    </div>
+    <button class="btn-ekim" onclick="document.getElementById('xml-input').click()">Importar</button>
+    <input type="file" id="xml-input" accept=".xml" style="display:none" onchange="importarXML(event)"/>
+  </div>
+
+  <div class="separador">— o registrar manualmente —</div>
+
+  <div class="form-card">
+    <h3>📦 Registrar Compra al Proveedor</h3>
+
+    <button class="btn-scan" onclick="abrirScanner()">📷 Escanear código de barras del juguete</button>
+
+    <div id="prod-detectado" class="prod-detectado" style="display:none"></div>
+
+    <div class="field"><label>Producto</label><select id="c-prod"></select></div>
+    <div class="field"><label>Cantidad recibida</label><input type="number" id="c-qty" value="1" min="1"/></div>
+    <div class="field"><label>Precio compra unitario (Gs.)</label><input type="number" id="c-precio" placeholder="Ej: 25000" oninput="calcVenta()"/></div>
+    <div class="field"><label>Margen de ganancia (%)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="number" id="c-margen" value="60" min="1" max="500" style="width:80px;" oninput="calcVenta()"/>
+        <div class="venta-calc" id="venta-calc">Precio venta: —</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>📸 Foto de factura del proveedor (opcional)</label>
+      <div class="foto-box" onclick="document.getElementById('foto-input').click()">
+        <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto(event)"/>
+        <div id="foto-preview-wrap"><div class="foto-placeholder">📷 Tocá para adjuntar foto</div></div>
+      </div>
+    </div>
+    <button class="btn-registrar" onclick="registrarCompra()">✅ Agregar al stock</button>
+  </div>
+  <div class="list-items" id="compras-list"><div class="empty">Sin compras registradas hoy.</div></div>
+</div>
+
+<!-- Comprobante modal -->
+<div class="modal-overlay" id="comprobante-modal" style="display:none">
+  <div class="modal-card">
+    <div class="comp-header">
+      <div class="comp-logo">🧸 GestJugue</div>
+      <div class="comp-fecha" id="comp-fecha"></div>
+    </div>
+    <div class="comp-title">Comprobante de Venta</div>
+    <div class="comp-rows" id="comp-rows"></div>
+    <div class="comp-ekuatia">* Factura oficial emitir por eKuatia</div>
+    <div class="comp-btns">
+      <button class="btn-comp-wa" id="btn-comp-wa">💬 Compartir por WhatsApp</button>
+      <button class="btn-comp-close" onclick="cerrarComprobante()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal eKuatia -->
+<div class="modal-overlay" id="ekuatia-modal" style="display:none">
+  <div class="modal-card">
+    <div class="comp-header" style="background:#1a3a5c;">
+      <div class="comp-logo" style="color:#58a6ff;">📄 Factura eKuatia detectada</div>
+      <div class="comp-fecha" id="ekim-emisor"></div>
+    </div>
+    <div style="padding:14px 16px 6px; font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px;">Productos en la factura</div>
+    <div id="ekim-items" style="padding:0 16px 10px; max-height:280px; overflow-y:auto;"></div>
+    <div style="padding:0 16px; font-size:0.72rem; color:var(--muted); margin-bottom:12px;" id="ekim-total"></div>
+    <div class="comp-btns">
+      <button class="btn-comp-wa" style="background:#1f6feb;" onclick="confirmarImport()">✅ Cargar todo al stock</button>
+      <button class="btn-comp-close" onclick="cerrarEkuatia()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alerta stock bajo -->
+<div class="alerta-stock" id="alerta-stock" style="display:none"></div>
+
+<!-- Scanner modal -->
+<div class="scanner-modal" id="scanner-modal" style="display:none">
+  <div class="scanner-header">
+    <span>Apuntá al código de barras del juguete</span>
+    <button onclick="cerrarScanner()">✕</button>
+  </div>
+  <div id="scanner-view"></div>
+  <div class="scanner-hint">El sistema detecta el código automáticamente</div>
+</div>
+
+<div class="panel" id="panel-stock">
+  <div id="stock-list"></div>
+</div>
+
+<div class="panel" id="panel-reporte">
+  <div class="rep-card">
+    <h3>Resumen del día</h3>
+    <div class="rep-row"><span>Ventas realizadas</span><span class="rep-val" id="r-ventas">0</span></div>
+    <div class="rep-row"><span>Ingresos totales</span><span class="rep-val rep-amber" id="r-ingresos">₲ 0</span></div>
+    <div class="rep-row"><span>Costo de mercadería</span><span class="rep-val" id="r-costo">₲ 0</span></div>
+    <div class="rep-row"><span>Ganancia neta</span><span class="rep-val rep-green" id="r-ganancia">₲ 0</span></div>
+  </div>
+  <div class="rep-card">
+    <h3>Ventas del día</h3>
+    <div id="ventas-list"><div class="empty">Sin ventas aún.</div></div>
+  </div>
+  <div class="ekuatia-note">
+    <h3>eKuatia — sin doble trabajo</h3>
+    <p>
+      Las facturas las seguís emitiendo en eKuatia como siempre.<br>
+      GestJugue lleva el <strong>stock, compras y ganancias</strong> en paralelo.<br>
+      <strong>No hay que registrar dos veces.</strong>
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const prods = [
+  { id:1, nombre:'Muñeca Baby',        emoji:'🪆', compra:25000, venta:45000, stock:8,  barcode:'7891234567890' },
+  { id:2, nombre:'Auto colección',     emoji:'🚗', compra:8000,  venta:15000, stock:15, barcode:'7891234512345' },
+  { id:3, nombre:'Pelota de fútbol',   emoji:'⚽', compra:18000, venta:32000, stock:6,  barcode:'7891234556789' },
+  { id:4, nombre:'Set Lego 200 pzas',  emoji:'🧱', compra:55000, venta:95000, stock:4,  barcode:'7891234578901' },
+  { id:5, nombre:'Peluche Osito',      emoji:'🧸', compra:12000, venta:22000, stock:10, barcode:'7891234534567' },
+  { id:6, nombre:'Juego de Mesa',      emoji:'🎲', compra:15000, venta:28000, stock:5,  barcode:'7891234590123' },
+  { id:7, nombre:'Figura Superhéroe',  emoji:'🦸', compra:10000, venta:18000, stock:12, barcode:'7891234523456' },
+  { id:8, nombre:'Puzzle 100 piezas',  emoji:'🧩', compra:20000, venta:35000, stock:7,  barcode:'7891234545678' },
+];
+
+let ventasHoy = [];
+let comprasHoy = [];
+
+const fmtGs = n => '₲ ' + n.toLocaleString('es-PY');
+const fmtHora = () => { const d = new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); };
+
+function setTab(t) {
+  ['vender','compras','stock','reporte'].forEach((p,i) => {
+    document.getElementById('panel-'+p).classList.toggle('active', p===t);
+    document.querySelectorAll('.tab')[i].classList.toggle('active', p===t);
+  });
+  if (t==='stock') renderStock();
+  if (t==='reporte') renderReporte();
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function vender(id) {
+  const p = prods.find(x => x.id===id);
+  if (!p || p.stock<=0) return;
+  p.stock--;
+  const hora = fmtHora();
+  const venta = { nombre:p.nombre, emoji:p.emoji, precio:p.venta, costo:p.compra, hora, ganancia: p.venta - p.compra };
+  ventasHoy.push(venta);
+  renderVender();
+  updateStats();
+  verificarStockBajo();
+  mostrarComprobante(p, venta, hora);
+}
+
+function mostrarComprobante(p, v, hora) {
+  const d = new Date();
+  const fecha = d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear()+' '+hora;
+  document.getElementById('comp-fecha').textContent = fecha;
+  document.getElementById('comp-rows').innerHTML = `
+    <div class="comp-row"><span class="cr-lbl">Producto</span><span class="cr-val">${p.emoji} ${p.nombre}</span></div>
+    <div class="comp-row"><span class="cr-lbl">Cantidad</span><span class="cr-val">1 unidad</span></div>
+    <div class="comp-row"><span class="cr-lbl">Precio de venta</span><span class="cr-val">${fmtGs(v.precio)}</span></div>
+    <div class="comp-row"><span class="cr-lbl">Tu ganancia</span><span class="cr-val cr-green">+ ${fmtGs(v.ganancia)}</span></div>
+    <div class="comp-row"><span class="cr-lbl">Stock restante</span><span class="cr-val ${p.stock<=3?'cr-amber':'cr-green'}">${p.stock} unidades${p.stock<=3?' ⚠':''}</span></div>`;
+  const msg = `🧸 GestJugue — Venta ${fecha}\n\nProducto: ${p.emoji} ${p.nombre}\nPrecio: ${fmtGs(v.precio)}\nGanancia: ${fmtGs(v.ganancia)}\n\n* Factura oficial por eKuatia`;
+  document.getElementById('btn-comp-wa').onclick = () => window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  document.getElementById('comprobante-modal').style.display = 'flex';
+}
+
+function cerrarComprobante() {
+  document.getElementById('comprobante-modal').style.display = 'none';
+}
+
+function verificarStockBajo() {
+  const bajos = prods.filter(p => p.stock > 0 && p.stock <= 3);
+  const agotados = prods.filter(p => p.stock === 0);
+  const el = document.getElementById('alerta-stock');
+  if (bajos.length || agotados.length) {
+    let txt = '⚠ ';
+    if (agotados.length) txt += agotados.map(p=>p.emoji+' '+p.nombre+': AGOTADO').join(' · ') + ' · ';
+    if (bajos.length) txt += bajos.map(p=>p.emoji+' '+p.nombre+': '+p.stock+' uds').join(' · ');
+    el.textContent = txt;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function renderVender() {
+  document.getElementById('prod-grid').innerHTML = prods.map(p => `
+    <div class="prod-card${p.stock===0?' agotado':p.stock<=3?' low-stock':''}" onclick="vender(${p.id})">
+      <div class="prod-icon">${p.emoji}</div>
+      <div class="prod-info">
+        <div class="prod-name">${p.nombre}</div>
+        <div class="prod-price">${fmtGs(p.venta)}</div>
+        <div class="prod-stock${p.stock===0?' out':p.stock<=3?' low':''}">
+          ${p.stock===0 ? 'Sin stock' : 'Stock: '+p.stock+' uds'+(p.stock<=3?' ⚠':'')}
+        </div>
+      </div>
+      <button class="btn-sell" ${p.stock===0?'disabled':''}>Vender</button>
+    </div>`).join('');
+}
+
+function renderStock() {
+  document.getElementById('stock-list').innerHTML = prods.map(p => `
+    <div class="stock-item">
+      <div class="stock-row">
+        <span class="stock-name">${p.emoji} ${p.nombre}</span>
+        <span class="stock-qty ${p.stock===0?'out':p.stock<=3?'low':'ok'}">${p.stock} uds</span>
+      </div>
+      <div class="stock-prices">
+        <div class="sp">Compra: <span>${fmtGs(p.compra)}</span></div>
+        <div class="sp">Venta: <span>${fmtGs(p.venta)}</span></div>
+        <div class="sp gain">Ganancia: <span>${fmtGs(p.venta-p.compra)}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderReporte() {
+  const ing = ventasHoy.reduce((s,v)=>s+v.precio,0);
+  const cost = ventasHoy.reduce((s,v)=>s+v.costo,0);
+  document.getElementById('r-ventas').textContent = ventasHoy.length;
+  document.getElementById('r-ingresos').textContent = fmtGs(ing);
+  document.getElementById('r-costo').textContent = fmtGs(cost);
+  document.getElementById('r-ganancia').textContent = fmtGs(ing-cost);
+  const el = document.getElementById('ventas-list');
+  el.innerHTML = ventasHoy.length ? [...ventasHoy].reverse().map(v=>`
+    <div class="venta-row">
+      <div><div>${v.nombre}</div><div class="vt">${v.hora}</div></div>
+      <div style="text-align:right;">
+        <div style="font-weight:700;">${fmtGs(v.precio)}</div>
+        <div style="font-size:.68rem;color:var(--green);">+${fmtGs(v.precio-v.costo)} ganancia</div>
+      </div>
+    </div>`).join('') : '<div class="empty">Sin ventas aún.</div>';
+}
+
+function updateStats() {
+  const ing = ventasHoy.reduce((s,v)=>s+v.precio,0);
+  const cost = ventasHoy.reduce((s,v)=>s+v.costo,0);
+  document.getElementById('st-ventas').textContent = ventasHoy.length;
+  document.getElementById('st-ingresos').textContent = fmtGs(ing);
+  document.getElementById('st-ganancia').textContent = fmtGs(ing-cost);
+}
+
+let fotoActual = null;
+let scanner = null;
+let barcodeDetectado = null;
+let itemsXML = [];
+
+function importarXML(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(ev.target.result, 'text/xml');
+      const emisor = xml.querySelector('dNomEmi')?.textContent || 'Proveedor';
+      const fecha  = xml.querySelector('dFecFirma')?.textContent || '';
+      const nroDoc = xml.querySelector('dNumDoc')?.textContent || '';
+      const items  = xml.querySelectorAll('gCamItem');
+      itemsXML = [];
+      items.forEach(item => {
+        const nombre = item.querySelector('dDesProSer')?.textContent || '';
+        const cant   = parseFloat(item.querySelector('dCantProSer')?.textContent || '0');
+        const precio = parseFloat(item.querySelector('dPUniProSer')?.textContent || '0');
+        const total  = cant * precio;
+        if (nombre && cant > 0) itemsXML.push({ nombre, cant, precio, total });
+      });
+      if (!itemsXML.length) { toast('⚠ No se encontraron productos en el XML'); return; }
+      document.getElementById('ekim-emisor').textContent = fecha + (nroDoc ? ' · Nº '+nroDoc : '');
+      const totalGral = itemsXML.reduce((s,i)=>s+i.total,0);
+      document.getElementById('ekim-items').innerHTML = itemsXML.map(i => {
+        const match = prods.find(p => p.nombre.toLowerCase().includes(i.nombre.toLowerCase().substring(0,6)));
+        return `<div class="ekim-item">
+          <div><div class="ekim-prod">${match ? match.emoji+' ' : ''}${i.nombre}</div>
+          <div class="ekim-det">${i.cant} uds × ${fmtGs(i.precio)}</div></div>
+          <div class="ekim-precio">${fmtGs(i.total)}</div>
+        </div>`;
+      }).join('');
+      document.getElementById('ekim-total').textContent = `Total factura: ${fmtGs(totalGral)} · ${itemsXML.length} productos · Emisor: ${emisor}`;
+      document.getElementById('ekuatia-modal').style.display = 'flex';
+    } catch(err) { toast('⚠ Error al leer el XML'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function confirmarImport() {
+  let cargados = 0;
+  itemsXML.forEach(item => {
+    const match = prods.find(p => p.nombre.toLowerCase().includes(item.nombre.toLowerCase().substring(0,6)));
+    if (match) {
+      match.stock += item.cant;
+      comprasHoy.push({ nombre:match.nombre, emoji:match.emoji, qty:item.cant, precio:item.precio, total:item.total, hora:fmtHora() });
+    } else {
+      const nuevoId = prods.length + 1;
+      prods.push({ id:nuevoId, nombre:item.nombre, emoji:'📦', compra:item.precio, venta:Math.round(item.precio*1.6/1000)*1000, stock:item.cant, barcode:'' });
+      comprasHoy.push({ nombre:item.nombre, emoji:'📦', qty:item.cant, precio:item.precio, total:item.total, hora:fmtHora() });
+    }
+    cargados++;
+  });
+  cerrarEkuatia();
+  const lista = document.getElementById('compras-list');
+  lista.innerHTML = [...comprasHoy].reverse().map(c=>`
+    <div class="list-item" style="flex-direction:column;align-items:stretch;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div class="li-name">${c.emoji} ${c.nombre}</div><div class="li-sub">+${c.qty} uds · ${c.hora}</div></div>
+        <div class="li-val">${fmtGs(c.total)}</div>
+      </div>
+    </div>`).join('');
+  renderVender();
+  document.getElementById('c-prod').innerHTML = prods.map(p=>`<option value="${p.id}">${p.emoji} ${p.nombre}</option>`).join('');
+  toast('✅ ' + cargados + ' productos cargados al stock desde eKuatia');
+}
+
+function cerrarEkuatia() {
+  document.getElementById('ekuatia-modal').style.display = 'none';
+  itemsXML = [];
+}
+
+function calcVenta() {
+  const compra = parseInt(document.getElementById('c-precio').value) || 0;
+  const margen = parseInt(document.getElementById('c-margen').value) || 0;
+  const venta = Math.round(compra * (1 + margen / 100) / 1000) * 1000;
+  document.getElementById('venta-calc').textContent = compra > 0
+    ? 'Precio venta: ₲ ' + venta.toLocaleString('es-PY')
+    : 'Precio venta: —';
+}
+
+function abrirScanner() {
+  document.getElementById('scanner-modal').style.display = 'flex';
+  scanner = new Html5Qrcode('scanner-view');
+  scanner.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 280, height: 140 }, formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.UPC_A
+    ]},
+    (codigo) => { codigoDetectado(codigo); },
+    () => {}
+  ).catch(() => toast('⚠ No se pudo acceder a la cámara'));
+}
+
+function cerrarScanner() {
+  if (scanner) { scanner.stop().catch(()=>{}); scanner = null; }
+  document.getElementById('scanner-modal').style.display = 'none';
+}
+
+function codigoDetectado(codigo) {
+  cerrarScanner();
+  barcodeDetectado = codigo;
+  const prod = prods.find(p => p.barcode === codigo);
+  const det = document.getElementById('prod-detectado');
+  const sel = document.getElementById('c-prod');
+  if (prod) {
+    det.innerHTML = `✅ Producto encontrado: <strong>${prod.emoji} ${prod.nombre}</strong> — Cód: ${codigo}`;
+    det.style.display = 'block';
+    sel.value = prod.id;
+    document.getElementById('c-precio').value = prod.compra;
+    calcVenta();
+    toast('✅ ' + prod.nombre + ' detectado');
+  } else {
+    det.innerHTML = `🆕 Código nuevo: <strong>${codigo}</strong> — Ingresá los datos del producto`;
+    det.style.display = 'block';
+    toast('🆕 Producto nuevo — completá los datos');
+  }
+}
+
+function previsualizarFoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  fotoActual = file;
+  const url = URL.createObjectURL(file);
+  document.getElementById('foto-preview-wrap').innerHTML =
+    `<img class="foto-preview" src="${url}" alt="Factura"/>`;
+  toast('📸 Foto adjuntada');
+}
+
+function registrarCompra() {
+  const id = parseInt(document.getElementById('c-prod').value);
+  const qty = parseInt(document.getElementById('c-qty').value)||1;
+  const precio = parseInt(document.getElementById('c-precio').value)||0;
+  const p = prods.find(x=>x.id===id);
+  if (!p||!precio) { toast('⚠ Completá precio de compra'); return; }
+  p.stock += qty;
+  p.compra = precio;
+  const fotoUrl = fotoActual ? URL.createObjectURL(fotoActual) : null;
+  comprasHoy.push({ nombre:p.nombre, emoji:p.emoji, qty, precio, total:qty*precio, hora:fmtHora(), fotoUrl });
+  const lista = document.getElementById('compras-list');
+  lista.innerHTML = [...comprasHoy].reverse().map(c=>`
+    <div class="list-item" style="flex-direction:column; align-items:stretch; gap:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div><div class="li-name">${c.emoji} ${c.nombre}</div><div class="li-sub">+${c.qty} unidades · ${c.hora}</div></div>
+        <div class="li-val">${fmtGs(c.total)}</div>
+      </div>
+      ${c.fotoUrl ? `<div><img src="${c.fotoUrl}" style="width:100%;max-height:120px;object-fit:cover;border-radius:7px;"/><div class="foto-tag">📸 Factura adjunta</div></div>` : ''}
+    </div>`).join('');
+  renderVender();
+  toast('📦 Stock actualizado: +' + qty + ' ' + p.nombre);
+  document.getElementById('c-qty').value = 1;
+  document.getElementById('c-precio').value = '';
+  fotoActual = null;
+  document.getElementById('foto-preview-wrap').innerHTML = '<div class="foto-placeholder">📷 Tocá para sacar foto o adjuntar</div>';
+}
+
+// Init
+const d = new Date();
+const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+document.getElementById('fecha-hdr').textContent = dias[d.getDay()]+' '+d.getDate()+' '+meses[d.getMonth()]+' '+d.getFullYear();
+document.getElementById('c-prod').innerHTML = prods.map(p=>`<option value="${p.id}">${p.emoji} ${p.nombre}</option>`).join('');
+renderVender();
+</script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</body>
+</html>
