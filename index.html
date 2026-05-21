@@ -702,18 +702,23 @@ function calcNpVenta() {
 function guardarNuevoProd() {
   const nombre = document.getElementById('np-nombre').value.trim();
   if (!nombre) { toast('⚠ Ingresá el nombre del artículo'); return; }
-  const compra = parseInt(document.getElementById('np-compra').value)||0;
+  if (!parseInt(document.getElementById('np-compra').value)) { toast('⚠ Ingresá el precio de compra'); return; }
+  const compra = parseInt(document.getElementById('np-compra').value);
   const venta  = parseInt(document.getElementById('np-venta').value)||Math.round(compra*1.6/1000)*1000;
   const qty    = parseInt(document.getElementById('np-qty').value)||1;
   const barcode= document.getElementById('np-barcode').value.trim()||String(Date.now());
   const newP   = { id:Date.now(), nombre, emoji:'📦', compra, venta, stock:qty, barcode };
   prods.push(newP);
+  // Registrar como compra del día
+  comprasHoy.push({ nombre, emoji:'📦', qty, precio:compra, total:qty*compra, hora:fmtHora(), fotoUrl:null });
   document.getElementById('c-prod').innerHTML = prods.map(p=>`<option value="${p.id}">${p.emoji} ${p.nombre}</option>`).join('');
   cerrarNuevoProd();
   cerrarVoz();
   renderVender();
+  renderComprasList();
   renderStock();
-  toast('✅ '+nombre+' agregado — stock: '+qty);
+  updateStats();
+  toast('📦 '+nombre+' registrado en compras — stock: '+qty);
 }
 
 // ── SCANNER ──
