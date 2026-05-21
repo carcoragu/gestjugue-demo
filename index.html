@@ -4,6 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>GestJugue — Demo Juguetería</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#25D366"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="GestJugue"/>
+<link rel="apple-touch-icon" href="icon.svg"/>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -788,6 +794,13 @@ const dias=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'], meses=['ene','feb','ma
 document.getElementById('fecha-hdr').textContent = dias[d.getDay()]+' '+d.getDate()+' '+meses[d.getMonth()]+' '+d.getFullYear();
 document.getElementById('c-prod').innerHTML = prods.map(p=>`<option value="${p.id}">${p.emoji} ${p.nombre}</option>`).join('');
 renderVender();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/gestjugue-demo/sw.js')
+    .then(() => console.log('SW registrado'))
+    .catch(e => console.log('SW error', e));
+}
 </script>
 </body>
 </html>

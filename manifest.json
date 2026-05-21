@@ -1,0 +1,13 @@
+{
+  "name": "GestJugue",
+  "short_name": "GestJugue",
+  "description": "Stock y ventas para tu juguetería",
+  "start_url": "/gestjugue-demo/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#25D366",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
