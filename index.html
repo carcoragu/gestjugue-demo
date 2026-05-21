@@ -674,8 +674,9 @@ function confirmarImport() {
     if (m) { m.stock+=item.cant; comprasHoy.push({nombre:m.nombre,emoji:m.emoji,qty:item.cant,precio:item.precio,total:item.total,hora:fmtHora()}); }
     else { const nid=prods.length+1; prods.push({id:nid,nombre:item.nombre,emoji:'📦',compra:item.precio,venta:Math.round(item.precio*1.6/1000)*1000,stock:item.cant,barcode:''}); comprasHoy.push({nombre:item.nombre,emoji:'📦',qty:item.cant,precio:item.precio,total:item.total,hora:fmtHora()}); }
   });
-  cerrarEkuatia(); renderComprasList(); renderVender();
+  cerrarEkuatia();
   document.getElementById('c-prod').innerHTML = prods.map(p=>`<option value="${p.id}">${p.emoji} ${p.nombre}</option>`).join('');
+  renderComprasList(); renderVender(); renderStock(); updateStats();
   toast('✅ '+itemsXML.length+' productos cargados desde eKuatia');
 }
 
