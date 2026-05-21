@@ -165,7 +165,11 @@ body { font-family: -apple-system, Arial, sans-serif; background: var(--bg); col
 .scanner-header button { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; border-radius: 6px; }
 #scanner-view { flex: 1; overflow: hidden; }
 #scanner-view video { width: 100% !important; height: 100% !important; object-fit: cover; }
-.scanner-hint { padding: 14px 16px; background: rgba(0,0,0,0.85); color: var(--green); font-size: 0.78rem; text-align: center; }
+.scanner-zoom { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 11px 16px; background: rgba(0,0,0,0.88); }
+.btn-zoom { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: #fff; font-size: 1.3rem; font-weight: 700; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; line-height: 1; }
+.btn-zoom:active { background: rgba(255,255,255,0.3); }
+.zoom-lbl { color: #ccc; font-size: 0.8rem; min-width: 64px; text-align: center; }
+.scanner-hint { padding: 10px 16px; background: rgba(0,0,0,0.85); color: var(--green); font-size: 0.76rem; text-align: center; line-height: 1.6; }
 
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--green); border-radius: 12px; padding: 9px 18px; font-size: 0.83rem; z-index: 999; opacity: 0; transition: all 0.3s; white-space: nowrap; max-width: 90vw; text-align: center; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -304,9 +308,14 @@ body { font-family: -apple-system, Arial, sans-serif; background: var(--bg); col
 
 <!-- Scanner -->
 <div class="scanner-modal" id="scanner-modal" style="display:none">
-  <div class="scanner-header"><span>Apuntá al código de barras</span><button onclick="cerrarScanner()">✕ Cerrar</button></div>
+  <div class="scanner-header"><span>📷 Apuntá al código de barras</span><button onclick="cerrarScanner()">✕ Cerrar</button></div>
   <div id="scanner-view"></div>
-  <div class="scanner-hint">El sistema detecta el código automáticamente</div>
+  <div class="scanner-zoom">
+    <button class="btn-zoom" onclick="ajustarZoom(-0.5)">−</button>
+    <span class="zoom-lbl" id="zoom-lbl">Zoom 1×</span>
+    <button class="btn-zoom" onclick="ajustarZoom(+0.5)">+</button>
+  </div>
+  <div class="scanner-hint">Mantené el código dentro del recuadro · Distancia ideal: 15 cm<br>Si el código es muy pequeño, usá el botón <strong>+</strong> para hacer zoom</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -642,13 +651,48 @@ function confirmarImport() {
 function cerrarEkuatia() { document.getElementById('ekuatia-modal').style.display='none'; itemsXML=[]; }
 
 // ── SCANNER ──
+let zoomActual=1, zoomMin=1, zoomMax=4, videoTrack=null;
+
 function abrirScanner() {
   document.getElementById('scanner-modal').style.display='flex';
+  zoomActual=1; videoTrack=null;
+  document.getElementById('zoom-lbl').textContent='Zoom 1×';
   scanner = new Html5Qrcode('scanner-view');
-  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:120},formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.UPC_A]},codigoDetectado,()=>{}).catch(()=>toast('⚠ No se pudo acceder a la cámara','var(--red)'));
+  const qw = Math.min(Math.round(window.innerWidth*0.82), 300);
+  scanner.start(
+    {facingMode:'environment'},
+    {
+      fps:15,
+      qrbox:{width:qw, height:Math.round(qw*0.44)},
+      videoConstraints:{facingMode:'environment', width:{ideal:1920}, height:{ideal:1080}},
+      formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.UPC_A]
+    },
+    codigoDetectado, ()=>{}
+  ).then(()=>{
+    setTimeout(()=>{
+      const vid = document.querySelector('#scanner-view video');
+      if (vid && vid.srcObject) {
+        const tracks = vid.srcObject.getVideoTracks();
+        if (tracks.length) {
+          videoTrack = tracks[0];
+          const caps = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+          if (caps.zoom) { zoomMin=caps.zoom.min||1; zoomMax=caps.zoom.max||4; }
+        }
+      }
+    }, 800);
+  }).catch(()=>toast('⚠ No se pudo acceder a la cámara','var(--red)'));
 }
 
-function cerrarScanner() { if(scanner){scanner.stop().catch(()=>{});scanner=null;} document.getElementById('scanner-modal').style.display='none'; }
+function ajustarZoom(delta) {
+  if (!videoTrack) { toast('Zoom no disponible en este celular'); return; }
+  zoomActual = Math.max(zoomMin, Math.min(zoomMax, zoomActual+delta));
+  try {
+    videoTrack.applyConstraints({advanced:[{zoom:zoomActual}]});
+    document.getElementById('zoom-lbl').textContent='Zoom '+zoomActual.toFixed(1)+'×';
+  } catch(e) { toast('Zoom no soportado en este celular'); }
+}
+
+function cerrarScanner() { if(scanner){scanner.stop().catch(()=>{});scanner=null;} videoTrack=null; document.getElementById('scanner-modal').style.display='none'; }
 
 function codigoDetectado(codigo) {
   cerrarScanner(); barcodeDetectado=codigo;
