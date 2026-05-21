@@ -301,6 +301,7 @@ body { font-family: -apple-system, Arial, sans-serif; background: var(--bg); col
   <div class="voz-resultado" id="voz-resultado"></div>
   <div class="voz-btns">
     <button class="btn-voz-ok" id="btn-voz-ok" style="display:none" onclick="confirmarVoz()">✅ Confirmar</button>
+    <button class="btn-voz-ok" id="btn-voz-nuevo" style="display:none;background:#1a6b8a;" onclick="abrirNuevoProd({cant:vozData?.cant||1,precio:vozData?.precio||0,venta:vozData?.venta||0})">🆕 Cargar artículo nuevo</button>
     <button class="btn-voz-cancel" onclick="cerrarVoz()">Cancelar</button>
   </div>
   <div class="voz-tip" id="voz-tip">Decí algo como:<br>"Compré 5 muñecas baby a 25000 ganancia 15000"<br>o "Vendí 3 peluches"</div>
@@ -316,6 +317,29 @@ body { font-family: -apple-system, Arial, sans-serif; background: var(--bg); col
     <button class="btn-zoom" onclick="ajustarZoom(+0.5)">+</button>
   </div>
   <div class="scanner-hint">Mantené el código dentro del recuadro · Distancia ideal: 15 cm<br>Si el código es muy pequeño, usá el botón <strong>+</strong> para hacer zoom</div>
+</div>
+
+<!-- Nuevo artículo (desde scanner o voz) -->
+<div class="modal-overlay" id="nuevo-prod-modal" style="display:none">
+  <div class="modal-card">
+    <div class="comp-header" style="background:#1a3a1a;">
+      <div class="comp-logo" style="color:var(--green);">🆕 Nuevo Artículo</div>
+      <button onclick="cerrarNuevoProd()" style="background:none;border:none;color:#aaa;font-size:1.1rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div class="field"><label>Nombre del artículo</label><input type="text" id="np-nombre" placeholder="Ej: Rompecabezas 500 piezas" autocomplete="off"/></div>
+      <div class="field"><label>Código de barras</label><input type="text" id="np-barcode" placeholder="(se completó automático)" readonly style="color:var(--muted)"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="field"><label>Cantidad</label><input type="number" id="np-qty" value="1" min="1"/></div>
+        <div class="field"><label>Precio compra (Gs.)</label><input type="number" id="np-compra" placeholder="0" oninput="calcNpVenta()"/></div>
+      </div>
+      <div class="field"><label>Precio venta (Gs.) <span style="color:var(--muted);font-size:0.74rem;">— se calcula automático</span></label><input type="number" id="np-venta" placeholder="0"/></div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button class="btn-scan" style="flex:2;background:var(--green);color:#000;border:none;" onclick="guardarNuevoProd()">✅ Guardar artículo</button>
+        <button class="btn-scan" style="flex:1;background:var(--surface);color:var(--muted);border:1px solid var(--border);" onclick="cerrarNuevoProd()">Cancelar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -422,8 +446,15 @@ function procesarVoz(txt) {
     <div class="voz-res-row"><span class="voz-res-lbl">Precio venta</span><span class="voz-res-val">${fmtGs(venta)}</span></div>` :
     `<div class="voz-res-row"><span class="voz-res-lbl">Precio venta</span><span class="voz-res-val">${prod?fmtGs(prod.venta):'—'}</span></div>`}`;
   res.style.display = 'block';
-  document.getElementById('voz-estado').textContent = prod ? '✅ Entendido — confirmá' : '⚠ Producto no reconocido';
-  document.getElementById('btn-voz-ok').style.display = prod ? 'block' : 'none';
+  if (prod) {
+    document.getElementById('voz-estado').textContent = '✅ Entendido — confirmá';
+    document.getElementById('btn-voz-ok').style.display = 'block';
+    document.getElementById('btn-voz-nuevo').style.display = 'none';
+  } else {
+    document.getElementById('voz-estado').textContent = '⚠ Artículo no reconocido — ¿es nuevo?';
+    document.getElementById('btn-voz-ok').style.display = 'none';
+    document.getElementById('btn-voz-nuevo').style.display = 'block';
+  }
 }
 
 function confirmarVoz() {
@@ -650,6 +681,41 @@ function confirmarImport() {
 
 function cerrarEkuatia() { document.getElementById('ekuatia-modal').style.display='none'; itemsXML=[]; }
 
+// ── NUEVO ARTÍCULO (desde scanner o voz) ──
+function abrirNuevoProd({barcode='', cant=1, precio=0, venta=0, nombreHint=''} = {}) {
+  document.getElementById('np-nombre').value = nombreHint;
+  document.getElementById('np-barcode').value = barcode;
+  document.getElementById('np-qty').value = cant;
+  document.getElementById('np-compra').value = precio || '';
+  document.getElementById('np-venta').value = venta || (precio ? Math.round(precio*1.6/1000)*1000 : '');
+  document.getElementById('nuevo-prod-modal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('np-nombre').focus(), 150);
+}
+
+function cerrarNuevoProd() { document.getElementById('nuevo-prod-modal').style.display='none'; }
+
+function calcNpVenta() {
+  const c = parseInt(document.getElementById('np-compra').value)||0;
+  if (c>0) document.getElementById('np-venta').value = Math.round(c*1.6/1000)*1000;
+}
+
+function guardarNuevoProd() {
+  const nombre = document.getElementById('np-nombre').value.trim();
+  if (!nombre) { toast('⚠ Ingresá el nombre del artículo'); return; }
+  const compra = parseInt(document.getElementById('np-compra').value)||0;
+  const venta  = parseInt(document.getElementById('np-venta').value)||Math.round(compra*1.6/1000)*1000;
+  const qty    = parseInt(document.getElementById('np-qty').value)||1;
+  const barcode= document.getElementById('np-barcode').value.trim()||String(Date.now());
+  const newP   = { id:Date.now(), nombre, emoji:'📦', compra, venta, stock:qty, barcode };
+  prods.push(newP);
+  document.getElementById('c-prod').innerHTML = prods.map(p=>`<option value="${p.id}">${p.emoji} ${p.nombre}</option>`).join('');
+  cerrarNuevoProd();
+  cerrarVoz();
+  renderVender();
+  renderStock();
+  toast('✅ '+nombre+' agregado — stock: '+qty);
+}
+
 // ── SCANNER ──
 let zoomActual=1, zoomMin=1, zoomMax=4, videoTrack=null;
 
@@ -698,9 +764,16 @@ function codigoDetectado(codigo) {
   cerrarScanner(); barcodeDetectado=codigo;
   const p = prods.find(x=>x.barcode===codigo);
   const det = document.getElementById('prod-detectado');
-  if (p) { det.innerHTML=`✅ Producto encontrado: <strong>${p.emoji} ${p.nombre}</strong>`; document.getElementById('c-prod').value=p.id; document.getElementById('c-precio').value=p.compra; calcVenta(); toast('✅ '+p.nombre+' detectado'); }
-  else { det.innerHTML=`🆕 Código nuevo: <strong>${codigo}</strong> — Ingresá los datos`; toast('🆕 Producto nuevo'); }
-  det.style.display='block';
+  if (p) {
+    det.innerHTML=`✅ Producto encontrado: <strong>${p.emoji} ${p.nombre}</strong>`;
+    document.getElementById('c-prod').value=p.id;
+    document.getElementById('c-precio').value=p.compra;
+    calcVenta(); toast('✅ '+p.nombre+' detectado');
+    det.style.display='block';
+  } else {
+    det.style.display='none';
+    abrirNuevoProd({ barcode: codigo });
+  }
 }
 
 // ── INIT ──
