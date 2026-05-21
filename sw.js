@@ -1,4 +1,4 @@
-const CACHE = 'gestjugue-v1';
+const CACHE = 'gestjugue-v2';
 const ASSETS = [
   '/gestjugue-demo/',
   '/gestjugue-demo/index.html',

@@ -421,16 +421,27 @@ function iniciarVoz(modo) {
   };
 }
 
+function parsearNumeroVoz(txt) {
+  // Convierte palabras numéricas al número antes de parsear
+  return txt
+    .replace(/un mill[oó]n y medio/gi, '1500000')
+    .replace(/medio mill[oó]n/gi, '500000')
+    .replace(/un mill[oó]n/gi, '1000000')
+    .replace(/dos millones/gi, '2000000')
+    .replace(/tres millones/gi, '3000000')
+    .replace(/(\d)[,.](\d{3})/g, '$1$2'); // "1.500.000" o "1,500,000" → 1500000
+}
+
 function procesarVoz(txt) {
-  const t = txt.toLowerCase();
+  const t = parsearNumeroVoz(txt.toLowerCase());
   // Cantidad
   const cantMatch = t.match(/(\d+)\s*(?:unidades?|muñeca|auto|pelota|juego|figura|puzzle|peluche|set|juguete)?/);
   const cant = cantMatch ? parseInt(cantMatch[1]) : 1;
-  // Precio
-  const precioMatch = t.match(/(?:a|precio|costo)\s*(\d{3,})/);
+  // Precio (primera ocurrencia después de "a", "precio" o "costo")
+  const precioMatch = t.match(/(?:^|\s)(?:a|precio|costo)\s+(\d{4,})/);
   const precio = precioMatch ? parseInt(precioMatch[1]) : 0;
   // Ganancia
-  const gananciaMatch = t.match(/ganancia\s*(\d{3,})/);
+  const gananciaMatch = t.match(/ganancia\s+(\d{3,})/);
   const ganancia = gananciaMatch ? parseInt(gananciaMatch[1]) : 0;
   const venta = ganancia > 0 ? precio + ganancia : Math.round(precio * 1.6 / 1000) * 1000;
   // Producto
@@ -699,6 +710,8 @@ function cerrarEkuatia() { document.getElementById('ekuatia-modal').style.displa
 
 // ── NUEVO ARTÍCULO (desde scanner o voz) ──
 function abrirNuevoProd({barcode='', cant=1, precio=0, venta=0, nombreHint=''} = {}) {
+  // Cerrar modal de voz si está abierto (z-index mayor tapa el formulario)
+  document.getElementById('voz-modal').style.display = 'none';
   document.getElementById('np-nombre').value = nombreHint;
   document.getElementById('np-barcode').value = barcode;
   document.getElementById('np-qty').value = cant;
